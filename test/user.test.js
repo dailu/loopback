@@ -1405,12 +1405,12 @@ describe('User', function() {
   });
 
   describe('Verification', function() {
-    describe('user.verify(options, fn)', function() {
+    describe('user.verify(verifyOptions, options, cb)', function() {
       it('Verify a user\'s email address', function(done) {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
@@ -1419,7 +1419,7 @@ describe('User', function() {
             host: ctx.req.get('host'),
           };
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             assert(result.email);
             assert(result.email.response);
             assert(result.token);
@@ -1445,7 +1445,7 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
@@ -1454,7 +1454,7 @@ describe('User', function() {
             host: ctx.req.get('host'),
           };
 
-          user.verify(options)
+          user.verify(verifyOptions)
             .then(function(result) {
               assert(result.email);
               assert(result.email.response);
@@ -1484,7 +1484,7 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
@@ -1494,7 +1494,7 @@ describe('User', function() {
             headers: {'message-id': 'custom-header-value'},
           };
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             assert(result.email);
             assert.equal(result.email.messageId, 'custom-header-value');
 
@@ -1516,19 +1516,19 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
             redirect: '/',
             protocol: ctx.req.protocol,
             host: ctx.req.get('host'),
-            templateFn: function(options, cb) {
-              cb(null, 'custom template  - verify url: ' + options.verifyHref);
+            templateFn: function(verifyOptions, cb) {
+              cb(null, 'custom template  - verify url: ' + verifyOptions.verifyHref);
             },
           };
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             assert(result.email);
             assert(result.email.response);
             assert(result.token);
@@ -1558,15 +1558,15 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
             redirect: '/',
             protocol: ctx.req.protocol,
             host: ctx.req.get('host'),
-            templateFn: function(options, cb) {
-              actualVerifyHref = options.verifyHref;
+            templateFn: function(verifyOptions, cb) {
+              actualVerifyHref = verifyOptions.verifyHref;
               cb(null, 'dummy body');
             },
           };
@@ -1579,7 +1579,7 @@ describe('User', function() {
           });
           user.pk = {toString: function() { return idString; }};
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             expect(result.uid).to.exist().and.be.an('object');
             expect(result.uid.toString()).to.equal(idString);
             const parsed = url.parse(actualVerifyHref, true);
@@ -1602,7 +1602,7 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
@@ -1621,7 +1621,7 @@ describe('User', function() {
             },
           };
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             assert(result.email);
             assert(result.email.response);
             assert(result.token);
@@ -1647,7 +1647,7 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
@@ -1662,7 +1662,7 @@ describe('User', function() {
             },
           };
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             assert(err);
             assert.equal(err.message, 'Fake error');
             assert.equal(result, undefined);
@@ -1686,7 +1686,7 @@ describe('User', function() {
           User.afterRemote('create', function(ctx, user, next) {
             assert(user, 'afterRemote should include result');
 
-            var options = {
+            var verifyOptions = {
               type: 'email',
               to: user.email,
               from: 'noreply@myapp.org',
@@ -1696,7 +1696,7 @@ describe('User', function() {
               port: 3000,
             };
 
-            user.verify(options, function(err, result) {
+            user.verify(verifyOptions, function(err, result) {
               var msg = result.email.response.toString('utf-8');
               assert(~msg.indexOf('http://myapp.org:3000/'));
 
@@ -1718,7 +1718,7 @@ describe('User', function() {
           User.afterRemote('create', function(ctx, user, next) {
             assert(user, 'afterRemote should include result');
 
-            var options = {
+            var verifyOptions = {
               type: 'email',
               to: user.email,
               from: 'noreply@myapp.org',
@@ -1728,7 +1728,7 @@ describe('User', function() {
               port: 80,
             };
 
-            user.verify(options, function(err, result) {
+            user.verify(verifyOptions, function(err, result) {
               var msg = result.email.response.toString('utf-8');
               assert(~msg.indexOf('http://myapp.org/'));
 
@@ -1750,7 +1750,7 @@ describe('User', function() {
           User.afterRemote('create', function(ctx, user, next) {
             assert(user, 'afterRemote should include result');
 
-            var options = {
+            var verifyOptions = {
               type: 'email',
               to: user.email,
               from: 'noreply@myapp.org',
@@ -1760,7 +1760,7 @@ describe('User', function() {
               port: 3000,
             };
 
-            user.verify(options, function(err, result) {
+            user.verify(verifyOptions, function(err, result) {
               var msg = result.email.response.toString('utf-8');
               assert(~msg.indexOf('https://myapp.org:3000/'));
 
@@ -1782,7 +1782,7 @@ describe('User', function() {
           User.afterRemote('create', function(ctx, user, next) {
             assert(user, 'afterRemote should include result');
 
-            var options = {
+            var verifyOptions = {
               type: 'email',
               to: user.email,
               from: 'noreply@myapp.org',
@@ -1792,7 +1792,7 @@ describe('User', function() {
               port: 443,
             };
 
-            user.verify(options, function(err, result) {
+            user.verify(verifyOptions, function(err, result) {
               var msg = result.email.response.toString('utf-8');
               assert(~msg.indexOf('https://myapp.org/'));
 
@@ -1828,7 +1828,7 @@ describe('User', function() {
         User.afterRemote('create', function(ctx, user, next) {
           assert(user, 'afterRemote should include result');
 
-          var options = {
+          var verifyOptions = {
             type: 'email',
             to: user.email,
             from: 'noreply@myapp.org',
@@ -1838,7 +1838,7 @@ describe('User', function() {
             restApiRoot: '/',
           };
 
-          user.verify(options, function(err, result) {
+          user.verify(verifyOptions, function(err, result) {
             if (err) return next(err);
             emailBody = result.email.response.toString('utf-8');
             next();
@@ -1858,9 +1858,9 @@ describe('User', function() {
           });
       });
 
-      it('removes "options.template" from Email payload', function() {
+      it('removes "verifyOptions.template" from Email payload', function() {
         var MailerMock = {
-          send: function(options, cb) { cb(null, options); },
+          send: function(verifyOptions, cb) { cb(null, verifyOptions); },
         };
 
         return User.create({email: 'user@example.com', password: 'pass'})
@@ -1885,8 +1885,8 @@ describe('User', function() {
               to: user.email,
               from: 'noreply@myapp.org',
               redirect: '#/some-path?a=1&b=2',
-              templateFn: (options, cb) => {
-                actualVerifyHref = options.verifyHref;
+              templateFn: (verifyOptions, cb) => {
+                actualVerifyHref = verifyOptions.verifyHref;
                 cb(null, 'dummy body');
               },
             })
@@ -1899,7 +1899,8 @@ describe('User', function() {
           });
       });
 
-      it('verify that options.templateFn receives options.verificationToken', function() {
+      it('verify that verifyOptions.templateFn receives ' +
+        'verifyOptions.verificationToken', function() {
         return User.create({email: 'test1@example.com', password: 'pass'})
           .then(user => {
             let actualVerificationToken;
@@ -1908,8 +1909,8 @@ describe('User', function() {
               to: user.email,
               from: 'noreply@myapp.org',
               redirect: '#/some-path?a=1&b=2',
-              templateFn: (options, cb) => {
-                actualVerificationToken = options.verificationToken;
+              templateFn: (verifyOptions, cb) => {
+                actualVerificationToken = verifyOptions.verificationToken;
                 cb(null, 'dummy body');
               },
             })
@@ -1917,6 +1918,89 @@ describe('User', function() {
           })
           .then(token => {
             expect(token).to.exist();
+          });
+      });
+
+      it('forwards the "options" argument to user.save() ' +
+        'when adding verification token', function() {
+        const ctxOptions = {testFlag: true};
+        const verifyOptions = {
+          type: 'email',
+          from: 'noreply@myapp.org',
+        };
+
+        // before save operation hook to capture ctx.options when saving
+        // verification token in user instance
+        User.observe('before save', function(ctx, next) {
+          if (!ctx.isNewInstance) {
+            // not checking equality since other properties are added by user.save()
+            expect(ctx.options).to.contain({testFlag: true});
+          }
+          next();
+        });
+
+        return User.create({email: 'test@example.com', password: 'pass'})
+          .then(user => {
+            return user.verify(verifyOptions, ctxOptions);
+          });
+      });
+
+      it('forwards the "options" argument to a custom templateFn function', function() {
+        const ctxOptions = {testFlag: true};
+        const verifyOptions = {
+          type: 'email',
+          from: 'noreply@myapp.org',
+          templateFn: (verifyOptions, options, cb) => {
+            // not checking equality since other properties are added by user.save()
+            expect(options).to.contain({testFlag: true});
+            cb(null, 'dummy body');
+          },
+        };
+
+        return User.create({email: 'test@example.com', password: 'pass'})
+          .then(user => {
+            return user.verify(verifyOptions, ctxOptions);
+          });
+      });
+
+      it('forwards the "options" argment to a custom token generator function', function() {
+        const ctxOptions = {testFlag: true};
+        const verifyOptions = {
+          type: 'email',
+          from: 'noreply@example.com',
+          generateVerificationToken: function(user, options, cb) {
+            // not checking equality since other properties are added by user.save()
+            expect(options).to.contain({testFlag: true});
+            cb(null, 'dummy token');
+          },
+        };
+
+        return User.create({email: 'test@example.com', password: 'pass'})
+          .then(user => {
+            return user.verify(verifyOptions, ctxOptions);
+          });
+      });
+
+      it('forwards the "options" argument to a custom mailer function', function() {
+        const ctxOptions = {testFlag: true};
+
+        // custom mailer function accepting the options argument
+        const mailer = function() {};
+        mailer.send = function(verifyOptions, options, cb) {
+          // not checking equality since other properties are added by user.save()
+          expect(options).to.contain({testFlag: true});
+          cb(null, 'dummy result');
+        };
+
+        const verifyOptions = {
+          type: 'email',
+          from: 'noreply@example.com',
+          mailer,
+        };
+
+        return User.create({email: 'test@example.com', password: 'pass'})
+          .then(user => {
+            return user.verify(verifyOptions, ctxOptions);
           });
       });
     });
