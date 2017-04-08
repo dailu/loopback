@@ -439,7 +439,7 @@ module.exports = function(User) {
    * ```js
    *    var verifyOptions = {
    *      type: 'email',
-   *      to: user.email,
+   *      from: noreply@example.com,
    *      template: 'verify.ejs',
    *      redirect: '/',
    *      tokenGenerator: function (user, cb) { cb("random-token"); }
@@ -468,7 +468,7 @@ module.exports = function(User) {
    *  callback function. This function should NOT add the token to the user
    *  object, instead simply execute the callback with the token! User saving
    *  and email sending will be handled in the `verify()` method.
-   * @param {Object} options remote context options
+   * @param {Object} options remote context options.
    * @callback {Function} cb Callback function.
    * @param {Error} err Error object.
    * @param {Object} object Contains email, token, uid.
@@ -485,19 +485,27 @@ module.exports = function(User) {
     var user = this;
     var userModel = this.constructor;
     var registry = userModel.registry;
-    var pkName = userModel.definition.idName() || 'id';
-    assert(typeof verifyOptions === 'object', 'verifyOptions required when calling user.verify()');
-    assert(verifyOptions.type, 'You must supply a verification type (verifyOptions.type)');
-    assert(verifyOptions.type === 'email', 'Unsupported verification type');
-    assert(verifyOptions.to || this.email,
-      'Must include verifyOptions.to when calling user.verify() ' +
-      'or the user must have an email property');
-    assert(verifyOptions.from, 'Must include verifyOptions.from when calling user.verify()');
 
+    // final assertion is performed once all options are assigned
+    assert(typeof verifyOptions === 'object',
+      'verifyOptions object param required when calling user.verify()');
+
+    // Set a default template generation function if none provided
+    verifyOptions.templateFn = verifyOptions.templateFn || createVerificationEmailBody;
+    // Set a default token generation function if none provided
+    verifyOptions.generateVerificationToken = verifyOptions.generateVerificationToken ||
+      User.generateVerificationToken;
+    // Set a default mailer function if none provided
+    verifyOptions.mailer = verifyOptions.mailer || userModel.email ||
+      registry.getModelByType(loopback.Email);
+    // Default email-to to the user's email
+    verifyOptions.to = verifyOptions.to || user.email;
+
+    var pkName = userModel.definition.idName() || 'id';
     verifyOptions.redirect = verifyOptions.redirect || '/';
     var defaultTemplate = path.join(__dirname, '..', '..', 'templates', 'verify.ejs');
     verifyOptions.template = path.resolve(verifyOptions.template || defaultTemplate);
-    verifyOptions.user = this;
+    verifyOptions.user = user;
     verifyOptions.protocol = verifyOptions.protocol || 'http';
 
     var app = userModel.app;
@@ -527,21 +535,19 @@ module.exports = function(User) {
         redirect: verifyOptions.redirect,
       });
 
-    verifyOptions.templateFn = verifyOptions.templateFn || createVerificationEmailBody;
+    // assert the verifyOptions params that might have been badly defined
+    assertVerifyOptions(verifyOptions);
 
-    // Email model
-    var Email =
-      verifyOptions.mailer || this.constructor.email || registry.getModelByType(loopback.Email);
+    // these functions have now been asserted
+    var generateVerificationToken = verifyOptions.generateVerificationToken;
+    var templateFn = verifyOptions.templateFn;
+    var Email = verifyOptions.mailer;
 
-    // Set a default token generation function if one is not provided
-    var tokenGenerator = verifyOptions.generateVerificationToken || User.generateVerificationToken;
-    assert(typeof tokenGenerator === 'function', 'generateVerificationToken must be a function');
-
-    // argument "options" is passed depending on tokenGenerator function requirements
-    if (tokenGenerator.length == 3) {
-      tokenGenerator(user, options, addTokenToUserAndSave);
+    // argument "options" is passed depending on verifyOptions.generateVerificationToken function requirements
+    if (generateVerificationToken.length == 3) {
+      generateVerificationToken(user, options, addTokenToUserAndSave);
     } else {
-      tokenGenerator(user, addTokenToUserAndSave);
+      generateVerificationToken(user, addTokenToUserAndSave);
     }
 
     function addTokenToUserAndSave(err, token) {
@@ -564,17 +570,15 @@ module.exports = function(User) {
 
       verifyOptions.text = verifyOptions.text.replace(/\{href\}/g, verifyOptions.verifyHref);
 
-      verifyOptions.to = verifyOptions.to || user.email;
-
       verifyOptions.subject = verifyOptions.subject || g.f('Thanks for Registering');
 
       verifyOptions.headers = verifyOptions.headers || {};
 
       // argument "options" is passed depending on templateFn function requirements
-      if (verifyOptions.templateFn.length == 3) {
-        verifyOptions.templateFn(verifyOptions, options, setHtmlContentAndSend);
+      if (templateFn.length == 3) {
+        templateFn(verifyOptions, options, setHtmlContentAndSend);
       } else {
-        verifyOptions.templateFn(verifyOptions, setHtmlContentAndSend);
+        templateFn(verifyOptions, setHtmlContentAndSend);
       }
 
       function setHtmlContentAndSend(err, html) {
@@ -599,8 +603,25 @@ module.exports = function(User) {
         }
       }
     }
+
     return cb.promise;
   };
+
+  function assertVerifyOptions(verifyOptions) {
+    assert(verifyOptions.type, 'You must supply a verification type (verifyOptions.type)');
+    assert(verifyOptions.type === 'email', 'Unsupported verification type');
+    assert(verifyOptions.to, 'Must include verifyOptions.to when calling user.verify() ' +
+      'or the user must have an email property');
+    assert(verifyOptions.from, 'Must include verifyOptions.from when calling user.verify()');
+    assert(typeof verifyOptions.templateFn === 'function',
+      'templateFn must be a function');
+    assert(typeof verifyOptions.generateVerificationToken === 'function',
+      'generateVerificationToken must be a function');
+    assert(typeof verifyOptions.generateVerificationToken === 'function',
+      'generateVerificationToken must be a function');
+    assert(verifyOptions.mailer, 'A mailer function must be provided');
+    assert(typeof verifyOptions.mailer.send === 'function', 'mailer.send must be a function ');
+  }
 
   function createVerificationEmailBody(verifyOptions, options, cb) {
     var template = loopback.template(verifyOptions.template);
